@@ -1,6 +1,6 @@
 const fallbackPlan = {
   source: "demo",
-  message: "Using Kai Connect's reliable offline recommendation engine.",
+  message: "Using kAI Connect's reliable offline recommendation engine.",
 };
 
 export async function POST(request: Request) {

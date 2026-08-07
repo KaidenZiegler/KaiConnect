@@ -1,6 +1,6 @@
-# Kai Connect
+# kAI Connect
 
-Kai Connect is a focused food-rescue app for households and whānau. The MVP helps people see what needs using, turn pantry ingredients into low-cost recipes, and track their savings and estimated waste reduction.
+kAI Connect is a focused food-rescue app for households and whānau. The MVP helps people see what needs using, turn pantry ingredients into low-cost recipes, and track their savings and estimated waste reduction.
 
 ## Hackathon Demo
 
@@ -13,7 +13,7 @@ Kai Connect is a focused food-rescue app for households and whānau. The MVP hel
 
 ### How recommendations work
 
-Kai Connect scores pantry items by expiry urgency, prioritising food that should be used today or soon. It combines the selected items into simple recipes ranked by pantry coverage, missing-ingredient cost, preparation time, serving fit, and nutrition balance. The demo works reliably with deterministic local recommendations and needs no database or sign-in.
+kAI Connect scores pantry items by expiry urgency, prioritising food that should be used today or soon. It combines the selected items into simple recipes ranked by pantry coverage, missing-ingredient cost, preparation time, serving fit, and nutrition balance. The demo works reliably with deterministic local recommendations and needs no database or sign-in.
 
 ## Local development
 

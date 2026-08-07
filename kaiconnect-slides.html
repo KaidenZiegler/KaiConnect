@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#10281d" />
+  <title>kAI connect — HTML Pitch Deck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --forest: #10281d;
+      --leaf: #2f7454;
+      --fern: #7bd4a6;
+      --mint: #dff4e6;
+      --sand: #f4efe5;
+      --paper: #fffdf7;
+      --clay: #d07b52;
+      --ink: #142019;
+      --muted: #526159;
+      --line: rgba(16, 40, 29, 0.16);
+      --serif: "Fraunces", Georgia, serif;
+      --sans: "DM Sans", Inter, system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body { background: #07140e; color: var(--ink); font-family: var(--sans); }
+    button { font: inherit; }
+
+    .deck { position: relative; width: 100%; height: 100%; }
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      width: 100%;
+      height: 100%;
+      padding: clamp(30px, 4.8vw, 78px) clamp(28px, 6.3vw, 104px) clamp(28px, 4vw, 62px);
+      overflow: hidden;
+      background: var(--sand);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateX(2.5%);
+      transition: opacity 260ms ease, transform 360ms cubic-bezier(.2,.75,.2,1), visibility 0s linear 360ms;
+    }
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: none;
+      transition-delay: 0s;
+    }
+    .slide.previous { transform: translateX(-2.5%); }
+    .slide::after {
+      content: "";
+      position: absolute;
+      width: min(46vw, 720px);
+      aspect-ratio: 1;
+      right: -24vw;
+      bottom: -34vw;
+      border-radius: 50%;
+      border: clamp(30px, 5vw, 82px) solid rgba(47,116,84,.08);
+      pointer-events: none;
+    }
+
+    .dark { background: var(--forest); color: white; }
+    .dark::after { border-color: rgba(123,212,166,.10); }
+    .mint { background: var(--mint); }
+    .earth { background: #6d4d35; color: white; }
+
+    .eyebrow {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      color: var(--clay);
+      font-size: clamp(12px, 1vw, 17px);
+      font-weight: 700;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    .eyebrow::before { content: ""; width: 34px; height: 2px; background: currentColor; }
+    .dark .eyebrow, .earth .eyebrow { color: var(--fern); }
+
+    .content { position: relative; z-index: 1; align-self: center; width: 100%; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1, h2, .display { font-family: var(--serif); letter-spacing: -.04em; }
+    h1 { max-width: 1050px; margin-bottom: 24px; font-size: clamp(58px, 9.6vw, 150px); line-height: .88; }
+    h2 { max-width: 1050px; margin-bottom: clamp(26px, 3vw, 48px); font-size: clamp(40px, 5.4vw, 84px); line-height: .98; }
+    h3 { margin-bottom: 10px; font-size: clamp(20px, 1.7vw, 28px); line-height: 1.15; }
+    p { color: var(--muted); font-size: clamp(17px, 1.45vw, 24px); line-height: 1.5; }
+    .dark p, .earth p { color: rgba(255,255,255,.68); }
+    .accent { color: var(--fern); }
+    .clay { color: var(--clay); }
+
+    .footer {
+      position: relative;
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: clamp(11px, .8vw, 14px);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .dark .footer, .earth .footer { color: rgba(255,255,255,.45); }
+    .brand { font-family: var(--serif); font-size: 1.25em; font-weight: 700; letter-spacing: -.02em; text-transform: none; }
+
+    .hero { grid-template-rows: 1fr auto; }
+    .hero .content { max-width: 1180px; }
+    .hero h1 { color: white; }
+    .hero .lead { max-width: 760px; margin-bottom: 0; font-size: clamp(20px, 2vw, 32px); }
+    .hero-mark {
+      position: absolute;
+      top: -22%;
+      right: -7%;
+      width: min(53vw, 850px);
+      aspect-ratio: 1;
+      border: clamp(40px, 6vw, 100px) solid rgba(123,212,166,.08);
+      border-radius: 50%;
+    }
+    .hero-mark::after {
+      content: "";
+      position: absolute;
+      inset: 22%;
+      border: 2px solid rgba(123,212,166,.24);
+      border-radius: 48% 52% 62% 38% / 60% 42% 58% 40%;
+      transform: rotate(-18deg);
+    }
+
+    .stat-layout { display: grid; grid-template-columns: 1.05fr .95fr; gap: clamp(40px, 8vw, 130px); align-items: center; }
+    .stat { font-family: var(--serif); color: var(--fern); font-size: clamp(82px, 12vw, 184px); font-weight: 900; line-height: .78; letter-spacing: -.07em; }
+    .stat-label { max-width: 470px; margin: 28px 0 0; color: rgba(255,255,255,.68); }
+    .quote { max-width: 660px; margin: 0; color: white !important; font-family: var(--serif); font-size: clamp(28px, 3vw, 48px); line-height: 1.18; }
+    .sdgs { display: flex; flex-wrap: wrap; gap: 10px 24px; margin-top: 34px; color: var(--fern); font-size: clamp(13px, 1vw, 16px); font-weight: 700; }
+
+    .feature-layout { display: grid; grid-template-columns: .85fr 1.15fr; gap: clamp(50px, 8vw, 140px); align-items: start; }
+    .feature-intro { max-width: 460px; }
+    .feature-list { border-top: 1px solid var(--line); }
+    .feature-row { display: grid; grid-template-columns: 64px 1fr; gap: 18px; padding: clamp(15px, 1.6vw, 25px) 0; border-bottom: 1px solid var(--line); }
+    .feature-no { color: var(--clay); font-size: 14px; font-weight: 700; letter-spacing: .1em; }
+    .feature-row h3 { margin: 0 0 5px; }
+    .feature-row p { margin: 0; font-size: clamp(14px, 1.05vw, 18px); }
+
+    .ai-layout { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(36px, 6vw, 96px); align-items: center; }
+    .ai-list { counter-reset: ai; border-top: 1px solid rgba(255,255,255,.16); }
+    .ai-item { counter-increment: ai; display: grid; grid-template-columns: 54px 1fr; padding: clamp(16px, 1.7vw, 26px) 0; border-bottom: 1px solid rgba(255,255,255,.16); }
+    .ai-item::before { content: "0" counter(ai); color: var(--fern); font-size: 13px; font-weight: 700; letter-spacing: .1em; }
+    .ai-item strong { display: block; margin-bottom: 4px; color: white; font-size: clamp(18px, 1.45vw, 24px); }
+    .ai-item span { color: rgba(255,255,255,.55); font-size: clamp(14px, 1vw, 17px); line-height: 1.4; }
+
+    .loop { display: grid; grid-template-columns: repeat(6, 1fr); align-items: center; gap: 0; margin-top: 44px; }
+    .step { position: relative; min-height: 185px; padding: 22px 18px; border-top: 3px solid var(--leaf); background: rgba(255,255,255,.58); }
+    .step:nth-child(even) { margin-top: 52px; }
+    .step:not(:last-child)::after { content: "→"; position: absolute; z-index: 2; top: 46%; right: -14px; color: var(--clay); font-size: 24px; font-weight: 700; }
+    .step-no { display: block; margin-bottom: 30px; color: var(--leaf); font-size: 13px; font-weight: 700; letter-spacing: .12em; }
+    .step strong { display: block; font-size: clamp(15px, 1.2vw, 20px); line-height: 1.22; }
+    .feedback { margin-top: 28px; color: var(--leaf); font-size: clamp(14px, 1vw, 17px); font-weight: 600; text-align: center; }
+
+    .impact-layout { display: grid; grid-template-columns: 1.05fr .95fr; gap: clamp(60px, 9vw, 150px); align-items: center; }
+    .impact-list { display: grid; gap: 0; border-top: 1px solid rgba(255,255,255,.17); }
+    .impact-item { display: grid; grid-template-columns: 38px 1fr; gap: 14px; padding: clamp(16px, 1.6vw, 24px) 0; border-bottom: 1px solid rgba(255,255,255,.17); }
+    .impact-item b { color: var(--fern); font-family: var(--serif); font-size: 28px; line-height: 1; }
+    .impact-item strong { display: block; margin-bottom: 3px; color: white; font-size: clamp(18px, 1.35vw, 23px); }
+    .impact-item span { color: rgba(255,255,255,.55); font-size: clamp(13px, 1vw, 17px); }
+
+    .kaupapa-layout { display: grid; grid-template-columns: 1.08fr .92fr; gap: clamp(48px, 7vw, 110px); align-items: center; }
+    .kaupapa-quote { color: white !important; font-family: var(--serif); font-size: clamp(31px, 3.3vw, 52px); line-height: 1.22; }
+    .principles { display: grid; grid-template-columns: 1fr 1fr; gap: 26px 34px; }
+    .principle { border-top: 2px solid rgba(223,244,230,.55); padding-top: 14px; }
+    .principle strong { display: block; color: var(--mint); font-family: var(--serif); font-size: clamp(20px, 1.6vw, 27px); }
+    .principle span { display: block; margin: 4px 0 9px; color: rgba(255,255,255,.42); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+    .principle p { margin: 0; font-size: clamp(13px, .95vw, 16px); line-height: 1.45; }
+
+    .closing { text-align: center; }
+    .closing .content { max-width: 1100px; margin: auto; }
+    .closing h2 { margin-inline: auto; color: white; font-size: clamp(45px, 6vw, 92px); }
+    .closing p { max-width: 720px; margin: 0 auto; font-size: clamp(18px, 1.55vw, 25px); }
+    .closing-rule { width: 76px; height: 3px; margin: 38px auto 0; background: var(--fern); }
+
+    .controls {
+      position: fixed;
+      z-index: 20;
+      right: 20px;
+      bottom: 18px;
+      display: flex;
+      gap: 8px;
+    }
+    .controls button {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 50%;
+      background: rgba(7,20,14,.78);
+      color: white;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+    }
+    .controls button:hover { background: var(--leaf); }
+    .controls button:focus-visible { outline: 3px solid var(--fern); outline-offset: 2px; }
+    .progress { position: fixed; z-index: 22; top: 0; left: 0; width: 100%; height: 4px; background: rgba(255,255,255,.12); }
+    .progress span { display: block; width: 12.5%; height: 100%; background: var(--fern); transition: width 300ms ease; }
+    .help { position: fixed; z-index: 19; left: 20px; bottom: 18px; color: rgba(255,255,255,.6); font-size: 12px; letter-spacing: .04em; text-shadow: 0 1px 4px #000; }
+
+    @media (max-width: 900px), (max-aspect-ratio: 5/4) {
+      .slide { padding: 48px 34px 34px; overflow-y: auto; }
+      h1 { font-size: clamp(54px, 18vw, 100px); }
+      h2 { font-size: clamp(38px, 9vw, 64px); }
+      .stat-layout, .feature-layout, .ai-layout, .impact-layout, .kaupapa-layout { grid-template-columns: 1fr; gap: 30px; }
+      .stat { font-size: clamp(82px, 23vw, 145px); }
+      .feature-list, .ai-list { max-width: none; }
+      .loop { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 30px; }
+      .step, .step:nth-child(even) { min-height: 130px; margin-top: 0; }
+      .step:not(:last-child)::after { display: none; }
+      .principles { gap: 18px; }
+      .footer { margin-top: 30px; }
+      .help { display: none; }
+    }
+
+    @media print {
+      html, body { overflow: visible; background: white; }
+      .deck { height: auto; }
+      .slide { position: relative; width: 13.333in; height: 7.5in; break-after: page; opacity: 1; visibility: visible; transform: none; }
+      .controls, .progress, .help { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" aria-label="kAI connect pitch deck">
+    <section class="slide dark hero active" aria-label="Slide 1 of 8">
+      <div class="hero-mark" aria-hidden="true"></div>
+      <div class="content">
+        <div class="eyebrow">AI Hackathon at AUT · 2026</div>
+        <h1>k<span class="accent">AI</span><br />connect</h1>
+        <p class="lead">Helping whānau use what they have, waste less kai, and spend with intention.</p>
+      </div>
+      <div class="footer"><span class="brand">Hua Parakore × AI</span><span>01 / 08</span></div>
+    </section>
+
+    <section class="slide dark" aria-label="Slide 2 of 8">
+      <div class="eyebrow">The problem</div>
+      <div class="content stat-layout">
+        <div>
+          <div class="stat">$1k+</div>
+          <p class="stat-label">Food wasted by an Aotearoa household in a single year.</p>
+          <div class="sdgs"><span>SDG 2 · Zero Hunger</span><span>SDG 12 · Responsible Consumption</span><span>SDG 13 · Climate Action</span></div>
+        </div>
+        <p class="quote">“We buy too much, forget what we have, and throw away value.”</p>
+      </div>
+      <div class="footer"><span class="brand">kAI connect</span><span>02 / 08</span></div>
+    </section>
+
+    <section class="slide" aria-label="Slide 3 of 8">
+      <div class="eyebrow">The solution</div>
+      <div class="content feature-layout">
+        <div class="feature-intro">
+          <h2>Turn the fridge into a <span class="clay">smarter system.</span></h2>
+          <p>kAI connect sees what is on hand, prioritises what to use next, and improves the next shop.</p>
+        </div>
+        <div class="feature-list">
+          <div class="feature-row"><span class="feature-no">01</span><div><h3>Track your kai</h3><p>Add groceries by receipt scan or manual entry.</p></div></div>
+          <div class="feature-row"><span class="feature-no">02</span><div><h3>Act before spoilage</h3><p>See timely alerts before food reaches the bin.</p></div></div>
+          <div class="feature-row"><span class="feature-no">03</span><div><h3>Cook what needs using</h3><p>Get recipes led by ingredients approaching expiry.</p></div></div>
+          <div class="feature-row"><span class="feature-no">04</span><div><h3>Right-size the next shop</h3><p>Buy to real household patterns, not guesswork.</p></div></div>
+        </div>
+      </div>
+      <div class="footer"><span class="brand">kAI connect</span><span>03 / 08</span></div>
+    </section>
+
+    <section class="slide dark" aria-label="Slide 4 of 8">
+      <div class="eyebrow">The intelligence</div>
+      <div class="content ai-layout">
+        <div>
+          <h2>AI that learns from <span class="accent">real household behaviour.</span></h2>
+          <p>Every outcome improves the next recommendation.</p>
+        </div>
+        <div class="ai-list">
+          <div class="ai-item"><div><strong>Predict risk</strong><span>Monitor expiry and household consumption patterns.</span></div></div>
+          <div class="ai-item"><div><strong>Generate useful recipes</strong><span>Prioritise what is already in the kitchen.</span></div></div>
+          <div class="ai-item"><div><strong>Learn from outcomes</strong><span>Used, frozen, left over, or discarded.</span></div></div>
+          <div class="ai-item"><div><strong>Improve the shop</strong><span>Recommend quantities that fit the whānau.</span></div></div>
+        </div>
+      </div>
+      <div class="footer"><span class="brand">kAI connect</span><span>04 / 08</span></div>
+    </section>
+
+    <section class="slide mint" aria-label="Slide 5 of 8">
+      <div class="eyebrow">How it works</div>
+      <div class="content">
+        <h2>One loop gets smarter every week.</h2>
+        <div class="loop" aria-label="kAI connect feedback loop">
+          <div class="step"><span class="step-no">01</span><strong>Groceries purchased</strong></div>
+          <div class="step"><span class="step-no">02</span><strong>Expiry risk detected</strong></div>
+          <div class="step"><span class="step-no">03</span><strong>Use-soon action suggested</strong></div>
+          <div class="step"><span class="step-no">04</span><strong>Outcome recorded</strong></div>
+          <div class="step"><span class="step-no">05</span><strong>Pattern learned</strong></div>
+          <div class="step"><span class="step-no">06</span><strong>Next shop right-sized</strong></div>
+        </div>
+        <div class="feedback">↺ Each result feeds the next decision</div>
+      </div>
+      <div class="footer"><span class="brand">kAI connect</span><span>05 / 08</span></div>
+    </section>
+
+    <section class="slide dark" aria-label="Slide 6 of 8">
+      <div class="eyebrow">The impact</div>
+      <div class="content impact-layout">
+        <div><h2>Save the meal.<br /><span class="accent">Shift the habit.</span></h2><p>Value compounds from the kitchen to the climate.</p></div>
+        <div class="impact-list">
+          <div class="impact-item"><b>↓</b><div><strong>Less money wasted</strong><span>Buy only what the household is likely to use.</span></div></div>
+          <div class="impact-item"><b>↓</b><div><strong>Less kai in the bin</strong><span>Use food while it still has value.</span></div></div>
+          <div class="impact-item"><b>↓</b><div><strong>Less landfill impact</strong><span>Prevent avoidable food waste at the source.</span></div></div>
+          <div class="impact-item"><b>↑</b><div><strong>Stronger habits for whānau</strong><span>Turn better decisions into a repeatable rhythm.</span></div></div>
+        </div>
+      </div>
+      <div class="footer"><span class="brand">kAI connect</span><span>06 / 08</span></div>
+    </section>
+
+    <section class="slide earth" aria-label="Slide 7 of 8">
+      <div class="eyebrow">Our kaupapa</div>
+      <div class="content kaupapa-layout">
+        <p class="kaupapa-quote">Hua Parakore is a commitment to pure, waste-free outcomes — bringing ancestral wisdom into every kitchen.</p>
+        <div class="principles">
+          <div class="principle"><strong>Kaitiakitanga</strong><span>Guardianship</span><p>Care for resources, whenua, and what sustains us.</p></div>
+          <div class="principle"><strong>Manaakitanga</strong><span>Care for others</span><p>Support whānau without shame or judgement.</p></div>
+          <div class="principle"><strong>Whanaungatanga</strong><span>Relationships</span><p>Recognise that people, kai, and land are connected.</p></div>
+          <div class="principle"><strong>Mauri</strong><span>Life force</span><p>Protect the value and life carried by every meal.</p></div>
+        </div>
+      </div>
+      <div class="footer"><span class="brand">Hua Parakore × AI</span><span>07 / 08</span></div>
+    </section>
+
+    <section class="slide dark closing" aria-label="Slide 8 of 8">
+      <div></div>
+      <div class="content">
+        <div class="eyebrow" style="justify-content:center">The opportunity</div>
+        <h2>Waste less kai.<br /><span class="accent">Care for more.</span></h2>
+        <p>A smarter way to care for your whānau, your wallet, and your whenua.</p>
+        <div class="closing-rule"></div>
+      </div>
+      <div class="footer"><span class="brand">kAI connect</span><span>Aotearoa New Zealand · 08 / 08</span></div>
+    </section>
+  </main>
+
+  <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+  <div class="help">← → navigate · F fullscreen · Home / End jump</div>
+  <div class="controls" aria-label="Slide controls">
+    <button id="prev" type="button" aria-label="Previous slide">←</button>
+    <button id="next" type="button" aria-label="Next slide">→</button>
+    <button id="fullscreen" type="button" aria-label="Toggle fullscreen">⛶</button>
+  </div>
+
+  <script>
+    (() => {
+      const slides = [...document.querySelectorAll('.slide')];
+      const progress = document.getElementById('progressBar');
+      let current = Math.max(0, Math.min(slides.length - 1, Number(location.hash.slice(1)) - 1 || 0));
+
+      function show(index, updateHash = true) {
+        current = Math.max(0, Math.min(slides.length - 1, index));
+        slides.forEach((slide, i) => {
+          slide.classList.toggle('active', i === current);
+          slide.classList.toggle('previous', i < current);
+          slide.setAttribute('aria-hidden', i === current ? 'false' : 'true');
+        });
+        progress.style.width = `${((current + 1) / slides.length) * 100}%`;
+        if (updateHash) history.replaceState(null, '', `#${current + 1}`);
+        document.title = `kAI connect — ${current + 1}/${slides.length}`;
+      }
+
+      const next = () => show(current + 1);
+      const prev = () => show(current - 1);
+      document.getElementById('next').addEventListener('click', next);
+      document.getElementById('prev').addEventListener('click', prev);
+      document.getElementById('fullscreen').addEventListener('click', () => {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+        else document.exitFullscreen?.();
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(event.key)) { event.preventDefault(); next(); }
+        if (['ArrowLeft', 'PageUp', 'Backspace'].includes(event.key)) { event.preventDefault(); prev(); }
+        if (event.key === 'Home') show(0);
+        if (event.key === 'End') show(slides.length - 1);
+        if (event.key.toLowerCase() === 'f') document.getElementById('fullscreen').click();
+      });
+
+      let touchStart = null;
+      document.addEventListener('touchstart', event => { touchStart = event.changedTouches[0].clientX; }, { passive: true });
+      document.addEventListener('touchend', event => {
+        if (touchStart == null) return;
+        const delta = event.changedTouches[0].clientX - touchStart;
+        if (Math.abs(delta) > 50) delta < 0 ? next() : prev();
+        touchStart = null;
+      }, { passive: true });
+
+      window.addEventListener('hashchange', () => show(Number(location.hash.slice(1)) - 1, false));
+      show(current, false);
+    })();
+  </script>
+</body>
+</html>
