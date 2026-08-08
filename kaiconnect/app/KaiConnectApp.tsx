@@ -15,6 +15,8 @@ import {
   CookingPot,
   HeartHandshake,
   Leaf,
+  LoaderCircle,
+  MapPin,
   Minus,
   PackageOpen,
   Plus,
@@ -57,6 +59,31 @@ export type Meal = {
 };
 
 type Page = "pantry" | "recipes" | "impact";
+
+type FoodBank = {
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  phone?: string;
+  website?: string;
+};
+
+const verifiedFoodBanks: FoodBank[] = [
+  { name: "Auckland City Mission – Food Security", address: "195 Federal Street, Auckland Central", latitude: -36.8498, longitude: 174.7622, phone: "0800 864 357", website: "https://aucklandcitymission.org.nz/get-help/food/" },
+  { name: "Wellington City Mission – Whakamaru", address: "4–8 Oxford Terrace, Mount Cook, Wellington", latitude: -41.3018, longitude: 174.7755, phone: "04 245 0900", website: "https://wellingtoncitymission.org.nz/what-we-do/social-supermarket/" },
+  { name: "Christchurch City Mission", address: "276–284 Hereford Street, Christchurch Central", latitude: -43.5305, longitude: 172.6461, phone: "03 365 0635", website: "https://www.citymission.org.nz/contact" },
+  { name: "Dunedin Salvation Army", address: "160 Crawford Street, Dunedin Central", latitude: -45.8797, longitude: 170.5011, phone: "0800 53 00 00", website: "https://www.salvationarmy.org.nz/help-us/food-banks/" },
+  { name: "Auckland City Salvation Army", address: "18 Allright Place, Mount Wellington, Auckland", latitude: -36.9136, longitude: 174.8398, phone: "0800 53 00 00", website: "https://www.salvationarmy.org.nz/help-us/food-banks/" },
+];
+
+function distanceInKm(fromLatitude: number, fromLongitude: number, toLatitude: number, toLongitude: number) {
+  const radians = (degrees: number) => degrees * Math.PI / 180;
+  const latitudeDistance = radians(toLatitude - fromLatitude);
+  const longitudeDistance = radians(toLongitude - fromLongitude);
+  const value = Math.sin(latitudeDistance / 2) ** 2 + Math.cos(radians(fromLatitude)) * Math.cos(radians(toLatitude)) * Math.sin(longitudeDistance / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
+}
 
 const seedPantry: PantryItem[] = [
   { id: "p1", name: "Chicken breast", quantity: 600, unit: "g", category: "Meat", urgency: "today", expiry: "Today", emoji: "🍗" },
@@ -230,6 +257,9 @@ export function KaiConnectApp() {
 function Pantry({ pantry, showAdd, setShowAdd, newItem, setNewItem, addItem, addReceiptItems, updateQuantity, removeItem, selectItem, useItUp }: { pantry: PantryItem[]; showAdd: boolean; setShowAdd: (value: boolean) => void; newItem: { name: string; quantity: string; unit: string; category: PantryItem["category"] }; setNewItem: (value: { name: string; quantity: string; unit: string; category: PantryItem["category"] }) => void; addItem: () => void; addReceiptItems: () => void; updateQuantity: (id: string, delta: number) => void; removeItem: (id: string) => void; selectItem: (id: string) => void; useItUp: () => void }) {
   const [addMode, setAddMode] = useState<"choose" | "manual" | "scanner">("choose");
   const [scanState, setScanState] = useState<"idle" | "scanning" | "ready">("idle");
+  const [donationItem, setDonationItem] = useState<PantryItem | null>(null);
+  const [foodBankStatus, setFoodBankStatus] = useState<"idle" | "searching" | "ready" | "error">("idle");
+  const [nearestFoodBank, setNearestFoodBank] = useState<(FoodBank & { distance: number }) | null>(null);
   const groups: { id: PantryItem["urgency"]; title: string; copy: string }[] = [
     { id: "today", title: "Use today", copy: "Highest priority" },
     { id: "soon", title: "Use soon", copy: "Within 3 days" },
@@ -248,6 +278,46 @@ function Pantry({ pantry, showAdd, setShowAdd, newItem, setNewItem, addItem, add
   const scanReceipt = () => {
     setScanState("scanning");
     window.setTimeout(() => setScanState("ready"), 1100);
+  };
+
+  const openDonation = (item: PantryItem) => {
+    setDonationItem(item);
+    setNearestFoodBank(null);
+    setFoodBankStatus("idle");
+  };
+
+  const findNearestFoodBank = () => {
+    if (!navigator.geolocation) {
+      setFoodBankStatus("error");
+      return;
+    }
+
+    setFoodBankStatus("searching");
+    navigator.geolocation.getCurrentPosition(async ({ coords }) => {
+      let candidates = verifiedFoodBanks;
+      try {
+        const overpassQuery = `[out:json][timeout:12];(nwr(around:50000,${coords.latitude},${coords.longitude})["social_facility"="food_bank"];nwr(around:50000,${coords.latitude},${coords.longitude})["name"~"food.?bank|city mission|salvation army",i];);out center tags;`;
+        const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`);
+        if (response.ok) {
+          const data = await response.json() as { elements?: Array<{ lat?: number; lon?: number; center?: { lat?: number; lon?: number }; tags?: Record<string, string> }> };
+          const nearbyListings = (data.elements ?? []).flatMap((entry): FoodBank[] => {
+            const latitude = entry.lat ?? entry.center?.lat;
+            const longitude = entry.lon ?? entry.center?.lon;
+            const tags = entry.tags ?? {};
+            if (latitude === undefined || longitude === undefined || !tags.name) return [];
+            const address = tags["addr:full"] ?? [tags["addr:housenumber"], tags["addr:street"], tags["addr:suburb"], tags["addr:city"]].filter(Boolean).join(" ") ?? "Local food bank";
+            return [{ name: tags.name, address: address || "Local food bank", latitude, longitude, phone: tags.phone, website: tags.website }];
+          });
+          if (nearbyListings.length) candidates = [...nearbyListings, ...verifiedFoodBanks];
+        }
+      } catch { /* The verified directory remains available as a fallback. */ }
+
+      const closest = candidates
+        .map((foodBank) => ({ ...foodBank, distance: distanceInKm(coords.latitude, coords.longitude, foodBank.latitude, foodBank.longitude) }))
+        .sort((first, second) => first.distance - second.distance)[0];
+      setNearestFoodBank(closest);
+      setFoodBankStatus("ready");
+    }, () => setFoodBankStatus("error"), { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
   };
 
   return <>
@@ -286,8 +356,28 @@ function Pantry({ pantry, showAdd, setShowAdd, newItem, setNewItem, addItem, add
         </div>
       </div>}
     </section>}
+
+    {donationItem && <div className="modal-backdrop"><section className="donation-modal" role="dialog" aria-modal="true" aria-labelledby="donation-title">
+      <button className="modal-close" onClick={() => setDonationItem(null)} aria-label="Close food bank finder"><X size={20} /></button>
+      <span className="donation-mark"><HeartHandshake size={28} /></span>
+      <p className="eyebrow">SHARE SURPLUS FOOD</p>
+      <h2 id="donation-title">Donate {donationItem.name.toLowerCase()} nearby</h2>
+      <p className="donation-lead">Find the closest available food-bank listing and contact them before travelling.</p>
+      <div className="donation-warning"><strong>Check before donating</strong><span>Only donate unopened food that is safe and within its use-by date. Many food banks cannot accept chilled, frozen, opened, or same-day-expiry food.</span></div>
+
+      {foodBankStatus === "idle" && <button className="primary-button big find-foodbank" onClick={findNearestFoodBank}><MapPin size={18} /> Use my location</button>}
+      {foodBankStatus === "searching" && <div className="finding-foodbank" role="status"><LoaderCircle size={22} /><span><strong>Finding your closest option…</strong><small>This can take a few seconds.</small></span></div>}
+      {foodBankStatus === "ready" && nearestFoodBank && <div className="foodbank-result">
+        <span className="result-pin"><MapPin size={22} /></span>
+        <div><small>Closest available listing · {nearestFoodBank.distance < 10 ? nearestFoodBank.distance.toFixed(1) : Math.round(nearestFoodBank.distance)} km away</small><h3>{nearestFoodBank.name}</h3><p>{nearestFoodBank.address}</p>{nearestFoodBank.phone && <a href={`tel:${nearestFoodBank.phone.replace(/\s/g, "")}`}>Call {nearestFoodBank.phone}</a>}</div>
+        <a className="primary-button" href={`https://www.google.com/maps/dir/?api=1&destination=${nearestFoodBank.latitude},${nearestFoodBank.longitude}`} target="_blank" rel="noreferrer">Directions <ArrowRight size={15} /></a>
+      </div>}
+      {foodBankStatus === "error" && <div className="foodbank-error"><strong>We couldn’t access your location.</strong><span>You can still search the nationwide food-bank directory by region.</span><a className="secondary-button" href="https://www.foodbank.co.nz/foodbanks" target="_blank" rel="noreferrer">Open food-bank directory <ArrowRight size={15} /></a></div>}
+      <p className="directory-note">Listings are sourced from local map data and verified NZ providers. Always call to confirm what they currently accept.</p>
+    </section></div>}
+
     <div className="pantry-toolbar"><p><span>{pantry.filter((item) => item.selected).length}</span> selected for recipe ideas</p><button className="filter-button"><Settings2 size={15} /> All categories <ChevronDown size={14} /></button></div>
-    <div className="pantry-groups">{groups.map((group) => { const items = pantry.filter((item) => item.urgency === group.id); return <section key={group.id} className={`pantry-group ${group.id}`}><header><div><span className="urgency-dot" /><h3>{group.title}</h3><em>{items.length}</em></div><p>{group.copy}</p></header><div className="pantry-cards">{items.map((item) => <article key={item.id} className={`pantry-card ${item.selected ? "selected" : ""}`}><button className="select-food" onClick={() => selectItem(item.id)} aria-label={`Select ${item.name}`}>{item.selected && <Check size={14} />}</button><span className="food-big">{item.emoji}</span><div className="pantry-copy"><strong>{item.name}</strong><small>{item.category} · expires {item.expiry.toLowerCase()}</small></div><div className="quantity-control"><button onClick={() => updateQuantity(item.id, item.quantity < 10 ? -1 : -100)} aria-label="Reduce quantity"><Minus size={13} /></button><span>{item.quantity} {item.unit}</span></div><button className="delete-button" onClick={() => removeItem(item.id)} aria-label={`Delete ${item.name}`}><Trash2 size={15} /></button></article>)}</div></section>; })}</div>
+    <div className="pantry-groups">{groups.map((group) => { const items = pantry.filter((item) => item.urgency === group.id); return <section key={group.id} className={`pantry-group ${group.id}`}><header><div><span className="urgency-dot" /><h3>{group.title}</h3><em>{items.length}</em></div><p>{group.copy}</p></header><div className="pantry-cards">{items.map((item) => <article key={item.id} className={`pantry-card ${item.selected ? "selected" : ""}`}><button className="select-food" onClick={() => selectItem(item.id)} aria-label={`Select ${item.name}`}>{item.selected && <Check size={14} />}</button><span className="food-big">{item.emoji}</span><div className="pantry-copy"><strong>{item.name}</strong><small>{item.category} · expires {item.expiry.toLowerCase()}</small>{(item.urgency === "today" || item.urgency === "soon") && <button className="donate-food" onClick={() => openDonation(item)}><HeartHandshake size={14} /> Donate nearby</button>}</div><div className="quantity-control"><button onClick={() => updateQuantity(item.id, item.quantity < 10 ? -1 : -100)} aria-label="Reduce quantity"><Minus size={13} /></button><span>{item.quantity} {item.unit}</span></div><button className="delete-button" onClick={() => removeItem(item.id)} aria-label={`Delete ${item.name}`}><Trash2 size={15} /></button></article>)}</div></section>; })}</div>
   </>;
 }
 
