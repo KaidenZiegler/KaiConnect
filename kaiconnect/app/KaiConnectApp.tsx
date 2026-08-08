@@ -24,24 +24,11 @@ import {
   Settings2,
   Sparkles,
   Sprout,
-  Target,
   Trash2,
-  TrendingDown,
   Users,
   WandSparkles,
   X,
 } from "lucide-react";
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 
 export type PantryItem = {
   id: string;
@@ -69,8 +56,6 @@ export type Meal = {
   steps: string[];
 };
 
-export type WasteEntry = { week: string; rescuedKg: number; saved: number };
-export type Goal = { id: string; name: string; detail: string; progress: number; target: number; unit: string };
 type Page = "pantry" | "recipes" | "impact";
 
 const seedPantry: PantryItem[] = [
@@ -132,20 +117,6 @@ const recipeIdeas: Meal[] = [
   },
 ];
 
-const impactData: WasteEntry[] = [
-  { week: "W1", rescuedKg: 1.8, saved: 21 },
-  { week: "W2", rescuedKg: 2.7, saved: 29 },
-  { week: "W3", rescuedKg: 3.4, saved: 34 },
-  { week: "This week", rescuedKg: 4.2, saved: 38 },
-];
-
-const goalsSeed: Goal[] = [
-  { id: "g1", name: "Waste less than 1 kg", detail: "This week", progress: 0.4, target: 1, unit: "kg" },
-  { id: "g2", name: "Save $30 this week", detail: "$38 estimated so far", progress: 38, target: 30, unit: "$" },
-  { id: "g3", name: "Use 5 expiring ingredients", detail: "Chicken, broccoli, milk and bread", progress: 4, target: 5, unit: "items" },
-  { id: "g4", name: "Cook 5 rescued meals", detail: "Keep the week moving", progress: 3, target: 5, unit: "meals" },
-];
-
 const navItems = [
   { id: "pantry" as const, label: "Pantry", icon: PackageOpen },
   { id: "recipes" as const, label: "Recipes", icon: BookOpen },
@@ -164,7 +135,6 @@ const demoReceiptItems: Omit<PantryItem, "id">[] = [
 export function KaiConnectApp() {
   const [activePage, setActivePage] = useState<Page>("pantry");
   const [pantry, setPantry] = useState(seedPantry);
-  const [goals, setGoals] = useState(goalsSeed);
   const [cookedCount, setCookedCount] = useState(3);
   const [recipe, setRecipe] = useState<Meal | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -179,7 +149,6 @@ export function KaiConnectApp() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.pantry) setPantry(parsed.pantry);
-        if (parsed.goals) setGoals(parsed.goals);
         if (typeof parsed.cookedCount === "number") setCookedCount(parsed.cookedCount);
       }
     } catch { /* Seeded data remains available. */ }
@@ -187,9 +156,9 @@ export function KaiConnectApp() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
-    try { localStorage.setItem("kai-connect-focused-state", JSON.stringify({ pantry, goals, cookedCount })); }
+    try { localStorage.setItem("kai-connect-focused-state", JSON.stringify({ pantry, cookedCount })); }
     catch { /* Persistence is never a blocker. */ }
-  }, [pantry, goals, cookedCount]);
+  }, [pantry, cookedCount]);
 
   useEffect(() => {
     if (!toast) return;
@@ -226,14 +195,12 @@ export function KaiConnectApp() {
 
   const markCooked = () => {
     setCookedCount((count) => count + 1);
-    setGoals((items) => items.map((goal) => goal.id === "g4" ? { ...goal, progress: Math.min(goal.target, goal.progress + 1) } : goal));
     setRecipe(null);
     setToast("Meal recorded in your impact");
   };
 
   const resetDemo = () => {
     setPantry(seedPantry);
-    setGoals(goalsSeed);
     setCookedCount(3);
     setToast("Demo restored");
   };
@@ -249,7 +216,7 @@ export function KaiConnectApp() {
       <div className="page-content">
         {activePage === "pantry" && <Pantry pantry={pantry} showAdd={showAdd} setShowAdd={setShowAdd} newItem={newItem} setNewItem={setNewItem} addItem={addItem} addReceiptItems={addReceiptItems} updateQuantity={updateQuantity} removeItem={(id) => setPantry((items) => items.filter((item) => item.id !== id))} selectItem={(id) => setPantry((items) => items.map((item) => item.id === id ? { ...item, selected: !item.selected } : item))} useItUp={useItUp} />}
         {activePage === "recipes" && <Recipes pantry={pantry} setPantry={setPantry} openRecipe={setRecipe} />}
-        {activePage === "impact" && <Impact cookedCount={cookedCount} goals={goals} />}
+        {activePage === "impact" && <Impact cookedCount={cookedCount} />}
       </div>
     </main>
 
@@ -333,18 +300,11 @@ function Recipes({ pantry, setPantry, openRecipe }: { pantry: PantryItem[]; setP
   </>;
 }
 
-function Impact({ cookedCount, goals }: { cookedCount: number; goals: Goal[] }) {
+function Impact({ cookedCount }: { cookedCount: number }) {
   return <>
     <section className="page-intro"><div><p className="eyebrow">YOUR IMPACT · AUGUST</p><h2>Small choices, meaningful change</h2><p>See how using what you already have supports your household budget and reduces waste.</p></div><span className="estimate-badge"><Leaf size={15} /> Environmental figures are estimates</span></section>
     <section className="impact-hero"><div><span className="impact-leaf"><Leaf size={27} /></span><p>This week your household used</p><strong>6 ingredients</strong><p>before they were likely to be wasted.</p></div><div className="impact-stats"><div><small>Saved this week</small><strong>$38</strong><span>estimated</span></div><div><small>Saved this month</small><strong>$122</strong><span>estimated</span></div><div><small>Meals cooked</small><strong>{cookedCount}</strong><span>using pantry food</span></div><div><small>Food rescued</small><strong>4.2 kg</strong><span>estimated</span></div></div></section>
-    <section className="chart-grid"><div className="panel chart-panel"><div className="panel-heading"><div><span className="section-icon green"><TrendingDown size={18} /></span><div><h3>Food rescued from waste</h3><p>Estimated kilograms over four weeks</p></div></div></div><ResponsiveContainer width="100%" height={240}><AreaChart data={impactData} margin={{ top: 10, right: 8, left: -20, bottom: 0 }}><defs><linearGradient id="impactFill" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3e7255" stopOpacity={0.35}/><stop offset="95%" stopColor="#3e7255" stopOpacity={0.03}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e6e6de" /><XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fill: "#73766d", fontSize: 12 }} /><YAxis axisLine={false} tickLine={false} tick={{ fill: "#73766d", fontSize: 12 }} /><Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e5e5dc" }} /><Area type="monotone" dataKey="rescuedKg" stroke="#3e7255" strokeWidth={3} fill="url(#impactFill)" /></AreaChart></ResponsiveContainer></div><div className="panel chart-panel"><div className="panel-heading"><div><span className="section-icon cream"><CircleDollarSign size={18} /></span><div><h3>Money kept in your pocket</h3><p>Estimated savings by week</p></div></div></div><ResponsiveContainer width="100%" height={240}><BarChart data={impactData} margin={{ top: 10, right: 8, left: -20, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e6e6de" /><XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fill: "#73766d", fontSize: 12 }} /><YAxis axisLine={false} tickLine={false} tick={{ fill: "#73766d", fontSize: 12 }} /><Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e5e5dc" }} /><Bar dataKey="saved" fill="#dc9e5a" radius={[7, 7, 0, 0]} /></BarChart></ResponsiveContainer></div></section>
-    <section className="panel goals-panel"><div className="panel-heading"><div><span className="section-icon orange"><Target size={18} /></span><div><h3>This week’s goals</h3><p>Your food-rescue progress</p></div></div></div><div className="goal-grid">{goals.map((goal) => <GoalCard goal={goal} key={goal.id} />)}</div></section>
   </>;
-}
-
-function GoalCard({ goal }: { goal: Goal }) {
-  const percent = Math.min(100, Math.round((goal.progress / goal.target) * 100));
-  return <article className="goal-card"><div className="goal-circle" style={{ "--progress": `${percent * 3.6}deg` } as React.CSSProperties}><span>{percent}%</span></div><div><strong>{goal.name}</strong><p>{goal.detail}</p><small>{goal.progress} / {goal.target} {goal.unit}</small></div></article>;
 }
 
 function RecipeModal({ meal, close, markCooked }: { meal: Meal; close: () => void; markCooked: () => void }) {
