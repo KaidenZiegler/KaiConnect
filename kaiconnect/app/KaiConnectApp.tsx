@@ -6,6 +6,7 @@ import {
   BarChart3,
   Bell,
   BookOpen,
+  Camera,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -17,6 +18,7 @@ import {
   Minus,
   PackageOpen,
   Plus,
+  ReceiptText,
   RotateCcw,
   Search,
   Settings2,
@@ -152,6 +154,13 @@ const navItems = [
 
 const nzd = new Intl.NumberFormat("en-NZ", { style: "currency", currency: "NZD" });
 
+const demoReceiptItems: Omit<PantryItem, "id">[] = [
+  { name: "Organic bananas", quantity: 3, unit: "items", category: "Produce", urgency: "soon", expiry: "3 days", emoji: "🍌" },
+  { name: "Whole wheat bread", quantity: 2, unit: "loaves", category: "Pantry", urgency: "soon", expiry: "4 days", emoji: "🍞" },
+  { name: "2% milk", quantity: 1, unit: "gallon", category: "Dairy", urgency: "fresh", expiry: "7 days", emoji: "🥛" },
+  { name: "Fresh ground coffee", quantity: 12, unit: "oz", category: "Pantry", urgency: "long", expiry: "Long life", emoji: "☕" },
+];
+
 export function KaiConnectApp() {
   const [activePage, setActivePage] = useState<Page>("pantry");
   const [pantry, setPantry] = useState(seedPantry);
@@ -221,6 +230,16 @@ export function KaiConnectApp() {
     setToast("Added to your pantry");
   };
 
+  const addReceiptItems = () => {
+    const scannedAt = Date.now();
+    setPantry((items) => [
+      ...demoReceiptItems.map((item, index) => ({ ...item, id: `receipt-${scannedAt}-${index}` })),
+      ...items,
+    ]);
+    setShowAdd(false);
+    setToast("4 foods scanned and added to your pantry");
+  };
+
   const useItUp = () => {
     setPantry((items) => items.map((item) => ({ ...item, selected: item.urgency === "today" || item.urgency === "soon" })));
     navigate("recipes");
@@ -244,13 +263,13 @@ export function KaiConnectApp() {
   return <div className="app-shell">
     <aside className="sidebar">
       <button className="brand" onClick={() => navigate("pantry")} aria-label="kAI Connect pantry"><span className="brand-mark"><Sprout size={22} strokeWidth={2.4} /></span><span><strong>kAI Connect</strong><small>Waste less, together</small></span></button>
-      <nav className="main-nav" aria-label="Main navigation"><p className="nav-kicker">Your food</p>{navItems.map(({ id, label, icon: Icon }) => <button key={id} className={activePage === id ? "nav-item active" : "nav-item"} onClick={() => navigate(id)}><Icon size={19} /><span>{label}</span>{id === "pantry" && <em>{urgentCount}</em>}</button>)}</nav>
+      <nav className="main-nav" aria-label="Main navigation"><p className="nav-kicker">Your food</p>{navItems.map(({ id, label, icon: Icon }) => <button key={id} className={activePage === id ? "nav-item active" : "nav-item"} onClick={() => navigate(id)}><Icon size={19} /><span>{label}</span></button>)}</nav>
     </aside>
 
     <main className="main-area">
       <header className="topbar"><div><span className="mobile-brand"><Sprout size={19} /> kAI Connect</span><h1>{navItems.find((item) => item.id === activePage)?.label}</h1></div><div className="top-actions"><button className="icon-button" aria-label="Search"><Search size={19} /></button><div className="notification-wrapper" ref={notificationRef}><button className={`icon-button notification ${showNotifications ? "active" : ""}`} aria-label={`${urgentCount} food expiry notifications`} aria-expanded={showNotifications} aria-controls="expiry-notifications" onClick={() => setShowNotifications((open) => !open)}><Bell size={19} />{urgentCount > 0 && <span className="notification-dot" />}</button>{showNotifications && <ExpiryNotifications items={urgentItems} close={() => setShowNotifications(false)} viewPantry={() => navigate("pantry")} useItUp={useItUp} />}</div></div></header>
       <div className="page-content">
-        {activePage === "pantry" && <Pantry pantry={pantry} showAdd={showAdd} setShowAdd={setShowAdd} newItem={newItem} setNewItem={setNewItem} addItem={addItem} updateQuantity={updateQuantity} removeItem={(id) => setPantry((items) => items.filter((item) => item.id !== id))} selectItem={(id) => setPantry((items) => items.map((item) => item.id === id ? { ...item, selected: !item.selected } : item))} useItUp={useItUp} />}
+        {activePage === "pantry" && <Pantry pantry={pantry} showAdd={showAdd} setShowAdd={setShowAdd} newItem={newItem} setNewItem={setNewItem} addItem={addItem} addReceiptItems={addReceiptItems} updateQuantity={updateQuantity} removeItem={(id) => setPantry((items) => items.filter((item) => item.id !== id))} selectItem={(id) => setPantry((items) => items.map((item) => item.id === id ? { ...item, selected: !item.selected } : item))} useItUp={useItUp} />}
         {activePage === "recipes" && <Recipes pantry={pantry} setPantry={setPantry} openRecipe={setRecipe} />}
         {activePage === "impact" && <Impact cookedCount={cookedCount} goals={goals} />}
       </div>
@@ -283,16 +302,65 @@ function ExpiryNotifications({ items, close, viewPantry, useItUp }: { items: Pan
   </section>;
 }
 
-function Pantry({ pantry, showAdd, setShowAdd, newItem, setNewItem, addItem, updateQuantity, removeItem, selectItem, useItUp }: { pantry: PantryItem[]; showAdd: boolean; setShowAdd: (value: boolean) => void; newItem: { name: string; quantity: string; unit: string; category: PantryItem["category"] }; setNewItem: (value: { name: string; quantity: string; unit: string; category: PantryItem["category"] }) => void; addItem: () => void; updateQuantity: (id: string, delta: number) => void; removeItem: (id: string) => void; selectItem: (id: string) => void; useItUp: () => void }) {
+function Pantry({ pantry, showAdd, setShowAdd, newItem, setNewItem, addItem, addReceiptItems, updateQuantity, removeItem, selectItem, useItUp }: { pantry: PantryItem[]; showAdd: boolean; setShowAdd: (value: boolean) => void; newItem: { name: string; quantity: string; unit: string; category: PantryItem["category"] }; setNewItem: (value: { name: string; quantity: string; unit: string; category: PantryItem["category"] }) => void; addItem: () => void; addReceiptItems: () => void; updateQuantity: (id: string, delta: number) => void; removeItem: (id: string) => void; selectItem: (id: string) => void; useItUp: () => void }) {
+  const [addMode, setAddMode] = useState<"choose" | "manual" | "scanner">("choose");
+  const [scanState, setScanState] = useState<"idle" | "scanning" | "ready">("idle");
   const groups: { id: PantryItem["urgency"]; title: string; copy: string }[] = [
     { id: "today", title: "Use today", copy: "Highest priority" },
     { id: "soon", title: "Use soon", copy: "Within 3 days" },
     { id: "fresh", title: "Fresh", copy: "Good for the week" },
     { id: "long", title: "Long life", copy: "Pantry staples" },
   ];
+
+  const toggleAddFood = () => {
+    if (!showAdd) {
+      setAddMode("choose");
+      setScanState("idle");
+    }
+    setShowAdd(!showAdd);
+  };
+
+  const scanReceipt = () => {
+    setScanState("scanning");
+    window.setTimeout(() => setScanState("ready"), 1100);
+  };
+
   return <>
-    <section className="page-intro"><div><p className="eyebrow">{pantry.length} ITEMS · {pantry.filter((item) => item.urgency === "today" || item.urgency === "soon").length} NEED ATTENTION</p><h2>Your pantry, sorted by urgency</h2><p>See what needs using first. Select ingredients to turn them into a low-cost meal.</p></div><div className="intro-actions"><button className="secondary-button" onClick={() => setShowAdd(!showAdd)}><Plus size={17} /> Add food</button><button className="primary-button" onClick={useItUp}><WandSparkles size={17} /> Use it up</button></div></section>
-    {showAdd && <div className="panel add-form"><input aria-label="Ingredient name" placeholder="Ingredient name" value={newItem.name} onChange={(event) => setNewItem({ ...newItem, name: event.target.value })} /><input aria-label="Quantity" type="number" min="0" value={newItem.quantity} onChange={(event) => setNewItem({ ...newItem, quantity: event.target.value })} /><select aria-label="Unit" value={newItem.unit} onChange={(event) => setNewItem({ ...newItem, unit: event.target.value })}><option>item</option><option>g</option><option>kg</option><option>mL</option><option>L</option></select><select aria-label="Category" value={newItem.category} onChange={(event) => setNewItem({ ...newItem, category: event.target.value as PantryItem["category"] })}><option>Produce</option><option>Meat</option><option>Dairy</option><option>Pantry</option></select><button className="primary-button" onClick={addItem}>Add to pantry</button></div>}
+    <section className="page-intro"><div><p className="eyebrow">{pantry.length} ITEMS · {pantry.filter((item) => item.urgency === "today" || item.urgency === "soon").length} NEED ATTENTION</p><h2>Your pantry, sorted by urgency</h2><p>See what needs using first. Select ingredients to turn them into a low-cost meal.</p></div><div className="intro-actions"><button className="secondary-button" onClick={toggleAddFood} aria-expanded={showAdd}><Plus size={17} /> Add food</button><button className="primary-button" onClick={useItUp}><WandSparkles size={17} /> Use it up</button></div></section>
+
+    {showAdd && <section className="panel add-food-panel" aria-label="Add food">
+      <div className="add-food-heading">
+        <div><span className="section-icon green"><Plus size={18} /></span><div><h3>Add food to your pantry</h3><p>{addMode === "choose" ? "Choose how you want to add your food." : addMode === "manual" ? "Enter one pantry item." : "Scan the sample receipt to find purchased food."}</p></div></div>
+        <button className="panel-close" onClick={() => setShowAdd(false)} aria-label="Close add food"><X size={18} /></button>
+      </div>
+
+      {addMode === "choose" && <div className="add-methods">
+        <button onClick={() => setAddMode("manual")}><span className="method-icon"><Plus size={24} /></span><strong>Type it in manually</strong><small>Add a food, quantity, unit, and category.</small><em>Choose manual entry <ArrowRight size={15} /></em></button>
+        <button onClick={() => setAddMode("scanner")}><span className="method-icon receipt"><Camera size={24} /></span><strong>Scan a receipt</strong><small>Try the mock scanner with the provided receipt.</small><em>Open demo scanner <ArrowRight size={15} /></em></button>
+      </div>}
+
+      {addMode === "manual" && <div className="add-mode-body">
+        <button className="back-link" onClick={() => setAddMode("choose")}><ArrowRight size={14} /> Back to options</button>
+        <div className="add-form"><input aria-label="Ingredient name" placeholder="Ingredient name" value={newItem.name} onChange={(event) => setNewItem({ ...newItem, name: event.target.value })} /><input aria-label="Quantity" type="number" min="0" value={newItem.quantity} onChange={(event) => setNewItem({ ...newItem, quantity: event.target.value })} /><select aria-label="Unit" value={newItem.unit} onChange={(event) => setNewItem({ ...newItem, unit: event.target.value })}><option>item</option><option>g</option><option>kg</option><option>mL</option><option>L</option></select><select aria-label="Category" value={newItem.category} onChange={(event) => setNewItem({ ...newItem, category: event.target.value as PantryItem["category"] })}><option>Produce</option><option>Meat</option><option>Dairy</option><option>Pantry</option></select><button className="primary-button" onClick={addItem}>Add to pantry</button></div>
+      </div>}
+
+      {addMode === "scanner" && <div className="scanner-layout">
+        <div className={`mock-receipt ${scanState === "scanning" ? "scanning" : ""}`}>
+          <div className="receipt-store"><ReceiptText size={20} /><strong>Sample receipt</strong><small>15/03/2024 · Register 07</small></div>
+          <div className="receipt-lines"><span>3× Organic Bananas</span><strong>$9</strong><span>2× Whole Wheat Bread</span><strong>$16</strong><span>2% Milk — Gallon</span><strong>$4</strong><span>Fresh Ground Coffee 12oz</span><strong>$10</strong></div>
+          <div className="receipt-total"><span>Total</span><strong>$24</strong></div>
+          {scanState === "scanning" && <div className="scan-line" />}
+        </div>
+        <div className="scanner-copy">
+          <button className="back-link" onClick={() => { setAddMode("choose"); setScanState("idle"); }}><ArrowRight size={14} /> Back to options</button>
+          <span className="demo-badge">Demo scanner</span>
+          <h3>{scanState === "ready" ? "4 foods found" : scanState === "scanning" ? "Reading your receipt…" : "Ready to scan"}</h3>
+          <p>{scanState === "ready" ? "Check the recognized foods, then add them all to your pantry." : "This mock scan uses the receipt you provided. No image is uploaded or stored."}</p>
+          {scanState === "ready" && <ul className="scan-results">{demoReceiptItems.map((item) => <li key={item.name}><span>{item.emoji}</span><div><strong>{item.name}</strong><small>{item.quantity} {item.unit} · {item.category}</small></div><CheckCircle2 size={18} /></li>)}</ul>}
+          {scanState !== "ready" ? <button className="primary-button big scan-button" onClick={scanReceipt} disabled={scanState === "scanning"}><Camera size={18} />{scanState === "scanning" ? "Scanning…" : "Scan sample receipt"}</button> : <button className="primary-button big scan-button" onClick={addReceiptItems}><CheckCircle2 size={18} /> Add 4 foods to pantry</button>}
+        </div>
+      </div>}
+    </section>}
     <div className="pantry-toolbar"><p><span>{pantry.filter((item) => item.selected).length}</span> selected for recipe ideas</p><button className="filter-button"><Settings2 size={15} /> All categories <ChevronDown size={14} /></button></div>
     <div className="pantry-groups">{groups.map((group) => { const items = pantry.filter((item) => item.urgency === group.id); return <section key={group.id} className={`pantry-group ${group.id}`}><header><div><span className="urgency-dot" /><h3>{group.title}</h3><em>{items.length}</em></div><p>{group.copy}</p></header><div className="pantry-cards">{items.map((item) => <article key={item.id} className={`pantry-card ${item.selected ? "selected" : ""}`}><button className="select-food" onClick={() => selectItem(item.id)} aria-label={`Select ${item.name}`}>{item.selected && <Check size={14} />}</button><span className="food-big">{item.emoji}</span><div className="pantry-copy"><strong>{item.name}</strong><small>{item.category} · expires {item.expiry.toLowerCase()}</small></div><div className="quantity-control"><button onClick={() => updateQuantity(item.id, item.quantity < 10 ? -1 : -100)} aria-label="Reduce quantity"><Minus size={13} /></button><span>{item.quantity} {item.unit}</span><button onClick={() => updateQuantity(item.id, item.quantity < 10 ? 1 : 100)} aria-label="Increase quantity"><Plus size={13} /></button></div><button className="delete-button" onClick={() => removeItem(item.id)} aria-label={`Delete ${item.name}`}><Trash2 size={15} /></button></article>)}</div></section>; })}</div>
   </>;
