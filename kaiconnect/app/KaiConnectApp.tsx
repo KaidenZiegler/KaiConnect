@@ -58,6 +58,7 @@ export type PantryItem = {
 export type Meal = {
   id: string;
   name: string;
+  emoji: string;
   description: string;
   home: string[];
   buy: string[];
@@ -94,6 +95,7 @@ const recipeIdeas: Meal[] = [
   {
     id: "r1",
     name: "Chicken & vegetable rice bowls",
+    emoji: "🍚",
     description: "Tender chicken and crisp vegetables over fluffy rice with a simple savoury glaze.",
     home: ["Chicken breast", "Rice", "Broccoli", "Carrots"],
     buy: ["Soy sauce"],
@@ -107,8 +109,9 @@ const recipeIdeas: Meal[] = [
   {
     id: "r2",
     name: "Golden pantry frittata",
+    emoji: "🍳",
     description: "A flexible, protein-rich dinner that gives leftover vegetables a purpose.",
-    home: ["Eggs", "Spinach", "Potatoes", "Cheese"],
+    home: ["Eggs", "Spinach", "Potatoes", "Cheese", "Milk"],
     buy: [],
     cost: 0,
     servings: 4,
@@ -120,6 +123,7 @@ const recipeIdeas: Meal[] = [
   {
     id: "r3",
     name: "Tomato lentil cottage pie",
+    emoji: "🥧",
     description: "Rich tomato lentils under a golden potato topping.",
     home: ["Red lentils", "Canned tomatoes", "Potatoes", "Carrots"],
     buy: ["Frozen peas"],
@@ -129,6 +133,62 @@ const recipeIdeas: Meal[] = [
     nutrition: "480 kcal · 22g protein · 4 of 5-a-day",
     rescued: ["Carrots"],
     steps: ["Boil and mash potatoes.", "Simmer lentils, tomatoes, carrots, and peas until thick.", "Top with mash and bake until lightly browned."],
+  },
+  {
+    id: "r4",
+    name: "Warm banana bread pudding",
+    emoji: "🍌",
+    description: "A cosy, lightly spiced pudding that saves ripe bananas, bread, and milk from going to waste.",
+    home: ["Bananas", "Bread", "Milk", "Eggs"],
+    buy: ["Cinnamon"],
+    cost: 1.2,
+    servings: 4,
+    minutes: 35,
+    nutrition: "330 kcal · 10g protein · naturally sweetened",
+    rescued: ["Bananas", "Bread", "Milk"],
+    steps: ["Tear the bread into a small baking dish and slice the bananas over it.", "Whisk the milk, eggs, and cinnamon together.", "Pour over the bread and leave to soak for 5 minutes.", "Bake at 180°C until golden and just set."],
+  },
+  {
+    id: "r5",
+    name: "Creamy broccoli & potato soup",
+    emoji: "🥣",
+    description: "A smooth, comforting soup that turns everyday vegetables and a splash of milk into an easy meal.",
+    home: ["Broccoli", "Potatoes", "Milk", "Cheese"],
+    buy: ["Vegetable stock"],
+    cost: 1.8,
+    servings: 4,
+    minutes: 30,
+    nutrition: "310 kcal · 15g protein · 2 of 5-a-day",
+    rescued: ["Broccoli", "Milk"],
+    steps: ["Chop the broccoli and potatoes into small pieces.", "Simmer with vegetable stock until everything is tender.", "Blend until smooth, then stir through the milk.", "Season, top with grated cheese, and serve warm."],
+  },
+  {
+    id: "r6",
+    name: "Chicken & spinach pasta",
+    emoji: "🍝",
+    description: "A quick, creamy pasta that uses tender chicken and wilting spinach in one satisfying dinner.",
+    home: ["Chicken breast", "Spinach", "Pasta", "Cheese"],
+    buy: ["Garlic"],
+    cost: 1.5,
+    servings: 4,
+    minutes: 25,
+    nutrition: "560 kcal · 42g protein · 1 of 5-a-day",
+    rescued: ["Chicken breast", "Spinach"],
+    steps: ["Cook the pasta, reserving a cup of its cooking water.", "Slice and brown the chicken with the garlic.", "Add the spinach and cook until just wilted.", "Toss through the pasta with cheese and enough cooking water to make a silky sauce."],
+  },
+  {
+    id: "r7",
+    name: "Cheesy spinach toasties",
+    emoji: "🥪",
+    description: "Crisp golden toasties filled with melted cheese and spinach for a fast, low-waste lunch.",
+    home: ["Bread", "Cheese", "Spinach", "Milk"],
+    buy: [],
+    cost: 0,
+    servings: 4,
+    minutes: 15,
+    nutrition: "390 kcal · 18g protein · 1 of 5-a-day",
+    rescued: ["Bread", "Spinach", "Milk"],
+    steps: ["Wilt the spinach in a pan and squeeze out any excess moisture.", "Layer spinach and grated cheese between slices of bread.", "Brush the outsides lightly with milk or oil.", "Toast in a pan until crisp and the cheese has melted."],
   },
 ];
 
@@ -368,10 +428,21 @@ function Pantry({ pantry, showAdd, setShowAdd, newItem, setNewItem, addItem, add
 
 function Recipes({ pantry, setPantry, openRecipe }: { pantry: PantryItem[]; setPantry: (items: PantryItem[]) => void; openRecipe: (meal: Meal) => void }) {
   const selected = pantry.filter((item) => item.selected);
-  const customRecipe: Meal = { ...recipeIdeas[1], home: selected.length ? selected.map((item) => item.name) : recipeIdeas[1].home, rescued: selected.filter((item) => item.urgency === "today" || item.urgency === "soon").slice(0, 3).map((item) => item.name) };
+  const selectedNames = new Set(selected.map((item) => item.name));
+  const matchingRecipe = selected.length ? recipeIdeas.reduce((best, meal) => {
+    const score = meal.home.filter((ingredient) => selectedNames.has(ingredient)).length;
+    const bestScore = best.home.filter((ingredient) => selectedNames.has(ingredient)).length;
+    return score > bestScore ? meal : best;
+  }, recipeIdeas[0]) : recipeIdeas[1];
+  const customRecipe: Meal = {
+    ...matchingRecipe,
+    rescued: pantry
+      .filter((item) => matchingRecipe.home.includes(item.name) && (item.urgency === "today" || item.urgency === "soon"))
+      .map((item) => item.name),
+  };
   return <>
-    <section className="recipe-builder"><div className="builder-copy"><span className="ai-badge"><Sparkles size={15} /> AI recipe maker</span><h2>Make something with what you have</h2><p>Pick a few pantry ingredients and kAI Connect will turn them into a simple, low-cost meal.</p><div className="selected-chips">{pantry.slice(0, 10).map((item) => <button key={item.id} className={item.selected ? "selected" : ""} onClick={() => setPantry(pantry.map((current) => current.id === item.id ? { ...current, selected: !current.selected } : current))}><span>{item.emoji}</span>{item.name}{item.selected && <Check size={13} />}</button>)}</div><button className="primary-button big" onClick={() => openRecipe(customRecipe)}><WandSparkles size={18} /> Make something with these</button></div><div className="builder-visual"><div className="pot-ring"><CookingPot size={58} /><span className="ingredient-orbit one">🥦</span><span className="ingredient-orbit two">🥚</span><span className="ingredient-orbit three">🥔</span></div><p>{selected.length || 4} ingredients selected</p></div></section>
-    <section className="recipe-suggestions"><div className="panel-heading"><div><span className="section-icon orange"><BookOpen size={18} /></span><div><h3>Cheap favourites for your pantry</h3><p>Quick ideas based on what’s at home</p></div></div></div><div className="recipe-grid">{recipeIdeas.map((meal, index) => <article key={meal.id}><div className="recipe-thumb">{["🍚", "🍳", "🥔"][index]}<span>{meal.minutes} min</span></div><div><h3>{meal.name}</h3><p>{meal.home.slice(0, 3).join(" · ")}</p><strong>{meal.cost ? `Only ${nzd.format(meal.cost)} extra` : "Nothing extra to buy"}</strong><button onClick={() => openRecipe(meal)}>View recipe <ArrowRight size={15} /></button></div></article>)}</div></section>
+    <section className="recipe-builder"><div className="builder-copy"><span className="ai-badge"><Sparkles size={15} /> AI recipe maker</span><h2>Make something with what you have</h2><p>Pick a few pantry ingredients and kAI Connect will turn them into a simple, low-cost meal.</p><div className="selected-chips">{pantry.map((item) => <button key={item.id} className={item.selected ? "selected" : ""} aria-pressed={Boolean(item.selected)} onClick={() => setPantry(pantry.map((current) => current.id === item.id ? { ...current, selected: !current.selected } : current))}><span>{item.emoji}</span>{item.name}{item.selected && <Check size={13} />}</button>)}</div><div className="recipe-builder-action"><button className="primary-button big" onClick={() => openRecipe(customRecipe)}><WandSparkles size={18} /> Make something with these</button><p aria-live="polite"><Sparkles size={13} /> {selected.length ? `Best match: ${matchingRecipe.name}` : "Select ingredients for a tailored recipe"}</p></div></div><div className="builder-visual"><div className="pot-ring"><CookingPot size={58} /><span className="ingredient-orbit one">{selected[0]?.emoji || "🥦"}</span><span className="ingredient-orbit two">{selected[1]?.emoji || "🥚"}</span><span className="ingredient-orbit three">{selected[2]?.emoji || "🥔"}</span></div><p>{selected.length || 0} ingredients selected</p></div></section>
+    <section className="recipe-suggestions"><div className="panel-heading"><div><span className="section-icon orange"><BookOpen size={18} /></span><div><h3>Cheap favourites for your pantry</h3><p>Quick ideas based on what’s at home</p></div></div></div><div className="recipe-grid">{recipeIdeas.map((meal) => <article key={meal.id}><div className="recipe-thumb">{meal.emoji}<span>{meal.minutes} min</span></div><div><h3>{meal.name}</h3><p>{meal.home.slice(0, 3).join(" · ")}</p><strong>{meal.cost ? `Only ${nzd.format(meal.cost)} extra` : "Nothing extra to buy"}</strong><button onClick={() => openRecipe(meal)}>View recipe <ArrowRight size={15} /></button></div></article>)}</div></section>
   </>;
 }
 
@@ -392,5 +463,5 @@ function GoalCard({ goal }: { goal: Goal }) {
 function RecipeModal({ meal, close, markCooked }: { meal: Meal; close: () => void; markCooked: () => void }) {
   // Clicking the backdrop is an optional shortcut; the dialog has a dedicated close button.
   // eslint-disable-next-line jsx-a11y/no-static-element-interactions
-  return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}><section className="recipe-modal" role="dialog" aria-modal="true" aria-labelledby="recipe-title"><button className="modal-close" onClick={close} aria-label="Close recipe"><X size={20} /></button><div className="recipe-modal-visual"><span>🍲</span><div><Leaf size={15} /> Rescues {meal.rescued.length || 2} ingredients</div></div><div className="recipe-modal-body"><p className="eyebrow">USE-SOON RECIPE</p><h2 id="recipe-title">{meal.name}</h2><p className="recipe-lead">{meal.description}</p><div className="meal-facts modal-facts"><span><Clock3 size={16} />{meal.minutes} min</span><span><Users size={16} />Serves {meal.servings}</span><span><CircleDollarSign size={16} />{nzd.format(meal.cost)} extra</span></div><div className="reason-box"><Sparkles size={19} /><p><strong>Why kAI Connect chose this</strong>{meal.rescued.length ? `${meal.rescued.join(" and ")} need using soon. This meal gives them a purpose while keeping extra costs low.` : "This flexible recipe uses your selected pantry ingredients with nothing extra to buy."}</p></div><div className="recipe-columns"><div><h3>Ingredients</h3><h4>Using at home</h4><ul>{meal.home.map((item) => <li key={item}><CheckCircle2 size={15} />{item}</li>)}</ul><h4>Need to buy</h4><ul>{meal.buy.length ? meal.buy.map((item) => <li key={item}><Plus size={15} />{item}</li>) : <li><CheckCircle2 size={15} />Nothing extra</li>}</ul></div><div><h3>Method</h3><ol>{meal.steps.map((step, index) => <li key={step}><span>{index + 1}</span><p>{step}</p></li>)}</ol></div></div><div className="nutrition-strip"><HeartHandshake size={18} /><span><strong>Nutrition estimate</strong>{meal.nutrition}</span><small>Approximate per serving</small></div><div className="modal-actions"><button className="secondary-button" onClick={close}>Back to recipes</button><button className="primary-button" onClick={markCooked}><CheckCircle2 size={17} /> Mark as cooked</button></div></div></section></div>;
+  return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}><section className="recipe-modal" role="dialog" aria-modal="true" aria-labelledby="recipe-title"><button className="modal-close" onClick={close} aria-label="Close recipe"><X size={20} /></button><div className="recipe-modal-visual"><span>{meal.emoji}</span><div><Leaf size={15} /> {meal.rescued.length ? `Rescues ${meal.rescued.length} ingredients` : `Uses ${meal.home.length} pantry ingredients`}</div></div><div className="recipe-modal-body"><p className="eyebrow">USE-SOON RECIPE</p><h2 id="recipe-title">{meal.name}</h2><p className="recipe-lead">{meal.description}</p><div className="meal-facts modal-facts"><span><Clock3 size={16} />{meal.minutes} min</span><span><Users size={16} />Serves {meal.servings}</span><span><CircleDollarSign size={16} />{nzd.format(meal.cost)} extra</span></div><div className="reason-box"><Sparkles size={19} /><p><strong>Why kAI Connect chose this</strong>{meal.rescued.length ? `${meal.rescued.join(" and ")} need using soon. This meal gives them a purpose while keeping extra costs low.` : "This flexible recipe uses your selected pantry ingredients while keeping extra costs low."}</p></div><div className="recipe-columns"><div><h3>Ingredients</h3><h4>Using at home</h4><ul>{meal.home.map((item) => <li key={item}><CheckCircle2 size={15} />{item}</li>)}</ul><h4>Need to buy</h4><ul>{meal.buy.length ? meal.buy.map((item) => <li key={item}><Plus size={15} />{item}</li>) : <li><CheckCircle2 size={15} />Nothing extra</li>}</ul></div><div><h3>Method</h3><ol>{meal.steps.map((step, index) => <li key={step}><span>{index + 1}</span><p>{step}</p></li>)}</ol></div></div><div className="nutrition-strip"><HeartHandshake size={18} /><span><strong>Nutrition estimate</strong>{meal.nutrition}</span><small>Approximate per serving</small></div><div className="modal-actions"><button className="secondary-button" onClick={close}>Back to recipes</button><button className="primary-button" onClick={markCooked}><CheckCircle2 size={17} /> Mark as cooked</button></div></div></section></div>;
 }
