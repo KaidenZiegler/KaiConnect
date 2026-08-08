@@ -24,6 +24,7 @@ import {
   RotateCcw,
   Search,
   Settings2,
+  ShoppingBasket,
   Sparkles,
   Sprout,
   Trash2,
@@ -325,7 +326,7 @@ export function KaiConnectApp() {
       <div className="page-content">
         {activePage === "pantry" && <Pantry pantry={pantry} showAdd={showAdd} setShowAdd={setShowAdd} newItem={newItem} setNewItem={setNewItem} addItem={addItem} addReceiptItems={addReceiptItems} updateQuantity={updateQuantity} removeItem={(id) => setPantry((items) => items.filter((item) => item.id !== id))} selectItem={(id) => setPantry((items) => items.map((item) => item.id === id ? { ...item, selected: !item.selected } : item))} useItUp={useItUp} />}
         {activePage === "recipes" && <Recipes pantry={pantry} setPantry={setPantry} openRecipe={setRecipe} />}
-        {activePage === "impact" && <Impact cookedCount={cookedCount} />}
+        {activePage === "impact" && <Impact cookedCount={cookedCount} pantry={pantry} />}
       </div>
     </main>
 
@@ -503,10 +504,36 @@ function Recipes({ pantry, setPantry, openRecipe }: { pantry: PantryItem[]; setP
   </>;
 }
 
-function Impact({ cookedCount }: { cookedCount: number }) {
+function Impact({ cookedCount, pantry }: { cookedCount: number; pantry: PantryItem[] }) {
+  const [checkedSuggestions, setCheckedSuggestions] = useState<string[]>([]);
+  const suggestedItems = pantry.filter((item) => item.urgency === "today" || item.urgency === "soon").slice(0, 6);
+  const checkedCount = suggestedItems.filter((item) => checkedSuggestions.includes(item.id)).length;
+  const categoryEstimate: Record<PantryItem["category"], number> = { Produce: 3.5, Meat: 12, Dairy: 5.5, Pantry: 4 };
+  const estimatedTotal = suggestedItems.reduce((total, item) => total + categoryEstimate[item.category], 0);
+  const suggestedQuantity = (item: PantryItem) => {
+    if (item.unit === "slices") return "1 loaf";
+    return `${item.quantity} ${item.unit || (item.quantity === 1 ? "item" : "items")}`;
+  };
+  const toggleSuggestion = (id: string) => setCheckedSuggestions((items) => items.includes(id) ? items.filter((item) => item !== id) : [...items, id]);
+
   return <>
     <section className="page-intro"><div><p className="eyebrow">YOUR IMPACT · AUGUST</p><h2>Small choices, meaningful change</h2><p>See how using what you already have supports your household budget and reduces waste.</p></div><span className="estimate-badge"><Leaf size={15} /> Environmental figures are estimates</span></section>
     <section className="impact-hero"><div><span className="impact-leaf"><Leaf size={27} /></span><p>This week your household used</p><strong>6 ingredients</strong><p>before they were likely to be wasted.</p></div><div className="impact-stats"><div><small>Saved this week</small><strong>$38</strong><span>estimated</span></div><div><small>Saved this month</small><strong>$122</strong><span>estimated</span></div><div><small>Meals cooked</small><strong>{cookedCount}</strong><span>using pantry food</span></div><div><small>Food rescued</small><strong>4.2 kg</strong><span>estimated</span></div></div></section>
+    <section className="panel impact-shopping">
+      <header className="impact-shopping-heading"><div><span className="section-icon orange"><ShoppingBasket size={18} /></span><div><p className="eyebrow">PLAN AHEAD</p><h2>Suggested shopping for next week</h2><span>Smart restocks based on what you’re using up this week.</span></div></div>{suggestedItems.length > 0 && <strong>{suggestedItems.length - checkedCount} left to get</strong>}</header>
+      {suggestedItems.length ? <div className="impact-shopping-layout">
+        <div className="impact-shopping-list">{suggestedItems.map((item) => {
+          const checked = checkedSuggestions.includes(item.id);
+          return <button key={item.id} className={checked ? "checked" : ""} onClick={() => toggleSuggestion(item.id)} aria-pressed={checked}>
+            <span className="shopping-check">{checked && <Check size={14} />}</span>
+            <span className="shopping-suggestion-emoji">{item.emoji}</span>
+            <span><strong>{item.name}</strong><small>Current supply expires {item.expiry.toLowerCase()}</small></span>
+            <em>{suggestedQuantity(item)}</em>
+          </button>;
+        })}</div>
+        <aside className="shopping-insight"><span><Sparkles size={18} /></span><h3>Shop with less guesswork</h3><p>These restocks are suggested because you’re likely to finish the current items before next week.</p><div><small>Estimated basket</small><strong>{nzd.format(estimatedTotal)}</strong></div><div className="shopping-completion"><span style={{ width: `${suggestedItems.length ? (checkedCount / suggestedItems.length) * 100 : 0}%` }} /></div><small>{checkedCount} of {suggestedItems.length} items checked</small></aside>
+      </div> : <div className="impact-shopping-empty"><CheckCircle2 size={24} /><div><strong>No restocks suggested yet</strong><p>Your pantry has enough food to carry into next week.</p></div></div>}
+    </section>
   </>;
 }
 
