@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
@@ -26,7 +27,6 @@ import {
   Settings2,
   ShoppingBasket,
   Sparkles,
-  Sprout,
   Trash2,
   Users,
   WandSparkles,
@@ -317,12 +317,12 @@ export function KaiConnectApp() {
 
   return <div className="app-shell">
     <aside className="sidebar">
-      <button className="brand" onClick={() => navigate("pantry")} aria-label="kAI Connect pantry"><span className="brand-mark"><Sprout size={22} strokeWidth={2.4} /></span><span><strong>kAI Connect</strong><small>Waste less, together</small></span></button>
+      <button className="brand" onClick={() => navigate("pantry")} aria-label="kAI Connect pantry"><span className="brand-mark"><Image src="/kai-connect-logo.png" alt="" width={40} height={40} priority /></span><span><strong>kAI Connect</strong><small>Waste less, together</small></span></button>
       <nav className="main-nav" aria-label="Main navigation"><p className="nav-kicker">Your food</p>{navItems.map(({ id, label, icon: Icon }) => <button key={id} className={activePage === id ? "nav-item active" : "nav-item"} onClick={() => navigate(id)}><Icon size={19} /><span>{label}</span></button>)}</nav>
     </aside>
 
     <main className="main-area">
-      <header className="topbar"><div><span className="mobile-brand"><Sprout size={19} /> kAI Connect</span><h1>{navItems.find((item) => item.id === activePage)?.label}</h1></div><div className="top-actions"><button className="icon-button" aria-label="Search"><Search size={19} /></button><div className="notification-wrapper" ref={notificationRef}><button className={`icon-button notification ${showNotifications ? "active" : ""}`} aria-label={`${urgentCount} food expiry notifications`} aria-expanded={showNotifications} aria-controls="expiry-notifications" onClick={() => setShowNotifications((open) => !open)}><Bell size={19} />{urgentCount > 0 && <span className="notification-dot" />}</button>{showNotifications && <ExpiryNotifications items={urgentItems} close={() => setShowNotifications(false)} viewPantry={() => navigate("pantry")} useItUp={useItUp} />}</div></div></header>
+      <header className="topbar"><div><span className="mobile-brand"><Image className="mobile-logo" src="/kai-connect-logo.png" alt="" width={30} height={30} priority /> kAI Connect</span><h1>{navItems.find((item) => item.id === activePage)?.label}</h1></div><div className="top-actions"><button className="icon-button" aria-label="Search"><Search size={19} /></button><div className="notification-wrapper" ref={notificationRef}><button className={`icon-button notification ${showNotifications ? "active" : ""}`} aria-label={`${urgentCount} food expiry notifications`} aria-expanded={showNotifications} aria-controls="expiry-notifications" onClick={() => setShowNotifications((open) => !open)}><Bell size={19} />{urgentCount > 0 && <span className="notification-dot" />}</button>{showNotifications && <ExpiryNotifications items={urgentItems} close={() => setShowNotifications(false)} viewPantry={() => navigate("pantry")} useItUp={useItUp} />}</div></div></header>
       <div className="page-content">
         {activePage === "pantry" && <Pantry pantry={pantry} showAdd={showAdd} setShowAdd={setShowAdd} newItem={newItem} setNewItem={setNewItem} addItem={addItem} addReceiptItems={addReceiptItems} updateQuantity={updateQuantity} removeItem={(id) => setPantry((items) => items.filter((item) => item.id !== id))} selectItem={(id) => setPantry((items) => items.map((item) => item.id === id ? { ...item, selected: !item.selected } : item))} useItUp={useItUp} />}
         {activePage === "recipes" && <Recipes pantry={pantry} setPantry={setPantry} openRecipe={setRecipe} />}

@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "kAI Connect — Buy what you need. Use what you have.",
   description:
     "An intelligent weekly food assistant helping whānau spend less, use what they have, and waste less.",
-  icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
+  icons: { icon: "/favicon.ico", shortcut: "/favicon.ico", apple: "/kai-connect-logo.png" },
   openGraph: { title: "kAI Connect", description: "Buy what you need. Use what you have. Waste less." },
 };
 
