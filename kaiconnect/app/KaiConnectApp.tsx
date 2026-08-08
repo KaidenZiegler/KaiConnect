@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   BarChart3,
@@ -160,7 +160,9 @@ export function KaiConnectApp() {
   const [recipe, setRecipe] = useState<Meal | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [newItem, setNewItem] = useState({ name: "", quantity: "1", unit: "item", category: "Produce" as PantryItem["category"] });
+  const notificationRef = useRef<HTMLDivElement>(null);
 
   // Hydrate browser-only persisted state after the server-rendered first pass.
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -188,8 +190,27 @@ export function KaiConnectApp() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const urgentCount = pantry.filter((item) => item.urgency === "today" || item.urgency === "soon").length;
-  const navigate = (page: Page) => { setActivePage(page); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  useEffect(() => {
+    if (!showNotifications) return;
+
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (!notificationRef.current?.contains(event.target as Node)) setShowNotifications(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setShowNotifications(false);
+    };
+
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [showNotifications]);
+
+  const urgentItems = pantry.filter((item) => item.urgency === "today" || item.urgency === "soon");
+  const urgentCount = urgentItems.length;
+  const navigate = (page: Page) => { setActivePage(page); setShowNotifications(false); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const updateQuantity = (id: string, delta: number) => setPantry((items) => items.map((item) => item.id === id ? { ...item, quantity: Math.max(0, Number((item.quantity + delta).toFixed(1))) } : item));
 
   const addItem = () => {
@@ -227,7 +248,7 @@ export function KaiConnectApp() {
     </aside>
 
     <main className="main-area">
-      <header className="topbar"><div><span className="mobile-brand"><Sprout size={19} /> kAI Connect</span><h1>{navItems.find((item) => item.id === activePage)?.label}</h1></div><div className="top-actions"><button className="icon-button" aria-label="Search"><Search size={19} /></button><button className="icon-button notification" aria-label="Notifications"><Bell size={19} /><span /></button></div></header>
+      <header className="topbar"><div><span className="mobile-brand"><Sprout size={19} /> kAI Connect</span><h1>{navItems.find((item) => item.id === activePage)?.label}</h1></div><div className="top-actions"><button className="icon-button" aria-label="Search"><Search size={19} /></button><div className="notification-wrapper" ref={notificationRef}><button className={`icon-button notification ${showNotifications ? "active" : ""}`} aria-label={`${urgentCount} food expiry notifications`} aria-expanded={showNotifications} aria-controls="expiry-notifications" onClick={() => setShowNotifications((open) => !open)}><Bell size={19} />{urgentCount > 0 && <span className="notification-dot" />}</button>{showNotifications && <ExpiryNotifications items={urgentItems} close={() => setShowNotifications(false)} viewPantry={() => navigate("pantry")} useItUp={useItUp} />}</div></div></header>
       <div className="page-content">
         {activePage === "pantry" && <Pantry pantry={pantry} showAdd={showAdd} setShowAdd={setShowAdd} newItem={newItem} setNewItem={setNewItem} addItem={addItem} updateQuantity={updateQuantity} removeItem={(id) => setPantry((items) => items.filter((item) => item.id !== id))} selectItem={(id) => setPantry((items) => items.map((item) => item.id === id ? { ...item, selected: !item.selected } : item))} useItUp={useItUp} />}
         {activePage === "recipes" && <Recipes pantry={pantry} setPantry={setPantry} openRecipe={setRecipe} />}
@@ -240,6 +261,26 @@ export function KaiConnectApp() {
     {toast && <div className="toast"><CheckCircle2 size={18} />{toast}</div>}
     <button className="reset-demo" onClick={resetDemo} title="Reset demo"><RotateCcw size={15} /> Reset demo</button>
   </div>;
+}
+
+function ExpiryNotifications({ items, close, viewPantry, useItUp }: { items: PantryItem[]; close: () => void; viewPantry: () => void; useItUp: () => void }) {
+  const todayCount = items.filter((item) => item.urgency === "today").length;
+
+  return <section id="expiry-notifications" className="notification-popover" role="dialog" aria-modal="false" aria-labelledby="expiry-notifications-title">
+    <div className="notification-heading">
+      <div><span className="notification-heading-icon"><Bell size={16} /></span><div><h2 id="expiry-notifications-title">Food to use soon</h2><p>{items.length ? `${items.length} ${items.length === 1 ? "item needs" : "items need"} your attention` : "Everything is looking fresh"}</p></div></div>
+      <button onClick={close} aria-label="Close notifications"><X size={17} /></button>
+    </div>
+    {items.length ? <>
+      <div className="notification-summary"><span className="summary-dot today" /><strong>{todayCount ? `${todayCount} ${todayCount === 1 ? "item" : "items"} to use today` : "Nothing expires today"}</strong><span>Prioritised by expiry</span></div>
+      <div className="notification-list">{items.map((item) => <button key={item.id} className="expiry-notification" onClick={viewPantry}>
+        <span className="notification-food-icon">{item.emoji}</span>
+        <span><strong>{item.name}</strong><small>{item.quantity} {item.unit || (item.quantity === 1 ? "item" : "items")} · {item.category}</small></span>
+        <em className={item.urgency}>{item.urgency === "today" ? "Use today" : `In ${item.expiry}`}</em>
+      </button>)}</div>
+      <div className="notification-actions"><button onClick={viewPantry}>View pantry</button><button onClick={useItUp}><WandSparkles size={15} /> Find recipes</button></div>
+    </> : <div className="notification-empty"><CheckCircle2 size={25} /><strong>No food needs attention</strong><p>We’ll let you know when something is close to expiry.</p></div>}
+  </section>;
 }
 
 function Pantry({ pantry, showAdd, setShowAdd, newItem, setNewItem, addItem, updateQuantity, removeItem, selectItem, useItUp }: { pantry: PantryItem[]; showAdd: boolean; setShowAdd: (value: boolean) => void; newItem: { name: string; quantity: string; unit: string; category: PantryItem["category"] }; setNewItem: (value: { name: string; quantity: string; unit: string; category: PantryItem["category"] }) => void; addItem: () => void; updateQuantity: (id: string, delta: number) => void; removeItem: (id: string) => void; selectItem: (id: string) => void; useItUp: () => void }) {
